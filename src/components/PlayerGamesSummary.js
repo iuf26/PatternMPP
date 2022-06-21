@@ -2,11 +2,14 @@ import axios from "axios";
 import { useState } from "react";
 import { GLOBAL_SCORES_REQUEST } from "../routes/routes";
 import GameInfo from "./GameInfo";
+
 export const PlayerGamesSummary = (props) => {
   const GAMES_SUMMARY_REQUEST = "http://localhost:8080/score"; //trebuie adaugat aliasul player-ului
   //list of elements of Type Game
     const [playerGames,setPlayerGames] = useState([])
     const [stop,setStop]  = useState(false);
+    const [rank,setRank] = useState()
+    const [foundRank,setFoundRank] = useState(false)
   function fetchFinishedGameSummary() {
     if(!stop){
     let playerAlias = props.playerAlias;
@@ -29,13 +32,19 @@ export const PlayerGamesSummary = (props) => {
   return (
     <>
       <div>
+        Rank : {rank}
+        <br></br>
         Final ranks:
         <br></br>
         {
         playerGames.map((game,gameIndex) => {
-          let inBolt = false;
-          if(game.id == props.finishedGameId)
-              inBolt = true;
+              if(!foundRank){
+          if(game.id === props.currentGameId)
+            {let valueForRank = gameIndex + 1
+              setRank(valueForRank)}
+                  setFoundRank(true)
+              }
+              
           return (
             <GameInfo
               details={{
@@ -48,6 +57,7 @@ export const PlayerGamesSummary = (props) => {
             ></GameInfo>
           );
         })}
+           
       </div>
     </>
   );

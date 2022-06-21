@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PlayerGamesSummary } from "./PlayerGamesSummary";
 
 
+
 export default function BoardGame(props) {
 
   var clicks = 0;
@@ -39,8 +40,10 @@ function check(row, col, win) {
     if (row == linwin && col == colwin) {
       alert("you won");
       userWon = win.info[2];
-      setStop(true);
+      console.log(win.currentGameId)
+      
       sendFinishSignal();
+      setStop(true);
     }
     axios
       .put(UPDATE_PRIZE_REQUEST, {
@@ -95,7 +98,9 @@ function check(row, col, win) {
         </table>
 
         {!stop ? <ScoresTable /> : null}
-        {stop ? <PlayerGamesSummary playerAlias = {props.alias} />:null}
+      
+        {stop ? <PlayerGamesSummary playerAlias = {props.alias}  currentGameId = {props.currentGameId } />:null}
+       
       </div>
     </>
   );
