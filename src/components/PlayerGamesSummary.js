@@ -41,6 +41,7 @@ export const PlayerGamesSummary = (props) => {
               if(!foundRank){
           if(game.id === props.currentGameId)
             {let valueForRank = gameIndex + 1
+              console.log("rank:" ,valueForRank)
               setRank(valueForRank)}
                   setFoundRank(true)
               }

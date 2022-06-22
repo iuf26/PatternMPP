@@ -4,54 +4,27 @@ import ScoresTable from "./ScoresTable";
 import { useState } from "react";
 import { PlayerGamesSummary } from "./PlayerGamesSummary";
 
-
-
 export default function BoardGame(props) {
+  const UPDATE_LETTERS_REQUEST = "http://localhost:8080/letters";
+  const GET_SERVER_PROPOSED_LETTER_REQUEST =
+    "http://localhost:8080/propose-letter/";
+  const GET_CURRENT_USER_SCORE = "http://localhost:8080/games/";
+  const UPDATE_USER_SCORE_REQUEST = "http://localhost:8080/score";
 
-  var clicks = 0;
-var userScore = 100000;
-var userWon = -1;
+  var userScore = 100000;
+  var userWon = -1;
+  const [userLetter, setUserLetter] = useState();
+  const [serverLetter, setServerLetter] = useState();
+  const [points, setPoints] = useState(props.info[8]);
+  const [stop, setStop] = useState(false);
+  const [clicks, setClicks] = useState(0);
 
-const [stop,setStop] = useState(false);
-function sendFinishSignal(){
-    const REQUEST = FINISH_GAME_REQUEST +  "/" + props.currentGameId + "/" + "1"
-    axios.put(REQUEST)
-    .then(function (response) {
-      console.log(response);
-     
-    })
-    .catch((error) => {
-      console.log(error);
-    });
+  const [userUpdateScore,setUserUpdateScore] = useState();
 
-
-}
-
-function check(row, col, win) {
-    
-  if (clicks < 3) {
-    clicks = clicks + 1;
-    let linwin = win.info[0];
-    let colwin = win.info[1];
-    userScore = Math.sqrt(
-      (linwin - row) * (linwin - row) + (colwin - col) * (colwin - col)
-    );
-       
-    if (row == linwin && col == colwin) {
-      alert("you won");
-      userWon = win.info[2];
-      console.log(win.currentGameId)
-      
-      sendFinishSignal();
-      setStop(true);
-    }
+  function sendFinishSignal() {
+    const REQUEST = FINISH_GAME_REQUEST + "/" + props.currentGameId + "/" + "1";
     axios
-      .put(UPDATE_PRIZE_REQUEST, {
-        playerAlias: win.alias,
-        playerScore: userScore,
-        playerPrize: userWon,
-        currentGameId : win.currentGameId
-      })
+      .put(REQUEST)
       .then(function (response) {
         console.log(response);
       })
@@ -59,48 +32,142 @@ function check(row, col, win) {
         console.log(error);
       });
   }
-  if (clicks == 3) {
-    alert("Game Over");
-    clicks = clicks + 1;
-    if(!stop){
-      sendFinishSignal();
-    }
-    setStop(true);
-    
+  function calculateScore() {
+    let finalUserScore = 0;
+    axios
+      .get(GET_CURRENT_USER_SCORE + props.currentGameId)
+      .then(function (response) {
+        console.log(response);
+        finalUserScore = response.data.data.game.score;
+        const map1 = new Map();
+        map1.set(props.info[0], parseInt(props.info[1]));
+        map1.set(props.info[2], parseInt(props.info[3]));
+        map1.set(props.info[4], parseInt(props.info[5]));
+        map1.set(props.info[6], parseInt(props.info[7]));
+        console.log("MAPS--",map1)
+        if (userLetter != serverLetter) {
+          if (map1.get(userLetter) > map1.get(serverLetter)) {
+            finalUserScore = map1.get(userLetter) + map1.get(serverLetter);
+          } else {
+            if (map1.get(userLetter) < map1.get(serverLetter)) {
+              finalUserScore = finalUserScore - map1.get(userLetter);
+            }
+          }
+        console.log("finalScores",finalUserScore)
+        setUserUpdateScore(finalUserScore)
+          axios
+            .put(UPDATE_USER_SCORE_REQUEST, {
+              playerAlias: props.alias,
+              playerScore: finalUserScore,
+              playerLetters: "",
+              currentGameId: props.currentGameId,
+            })
+            .then(function (response) {
+             
+              
+            })
+            .catch((error) => {
+              console.log(error);
+            });
+            setPoints(finalUserScore);
+        }
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   }
-}
 
-
-
-
+  function userPickedLetter(letter, letterValue) {
+    setUserLetter(letter);
+    console.log(letter, letterValue);
+    axios
+      .put(UPDATE_LETTERS_REQUEST, {
+        playerAlias: props.alias,
+        playerScore: points,
+        playerLetters: letter,
+        currentGameId: props.currentGameId,
+      })
+      .then(function (response) {
+       
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+  function getServerLetter() {
+    console.log(clicks);
+    if (clicks < 3) {
+      let letterString =
+        props.info[0] + props.info[2] + props.info[4] + props.info[6];
+      axios
+        .get(GET_SERVER_PROPOSED_LETTER_REQUEST + letterString)
+        .then(function (response) {
+         
+          setServerLetter(response.data.data.proposed);
+          calculateScore();
+          setPoints(userUpdateScore);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+      
+      setClicks(clicks + 1);
+    }
+    if (clicks == 3) {
+      alert("Game over");
+      calculateScore();
+      setPoints(userUpdateScore);
+      sendFinishSignal();
+      setStop(true)
+    }
+  }
 
   return (
     <>
       <div>
-        <table>
-          <tr>
-            <td onClick={() => check(0, 0, props)}>*</td>
-            <td onClick={() => check(0, 1, props)}>*</td>
-            <td onClick={() => check(0, 2, props)}>*</td>
-          </tr>
+        <p>Points : {points}</p>
 
-          <tr>
-            <td onClick={() => check(1, 0, props)}>*</td>
-            <td onClick={() => check(1, 1, props)}>*</td>
-            <td onClick={() => check(1, 2, props)}>*</td>
-          </tr>
+        <p>Letters:</p>
+        <button
+          onClick={() => {
+            userPickedLetter(props.info[0], parseInt(props.info[1]));
+          }}
+        >
+          1.{props.info[0]} : {props.info[1]}
+        </button>
+        <button
+          onClick={() => {
+            userPickedLetter(props.info[2], parseInt(props.info[3]));
+          }}
+        >
+          2.{props.info[2]} : {props.info[3]}
+        </button>
+        <button
+          onClick={() => {
+            userPickedLetter(props.info[4], parseInt(props.info[5]));
+          }}
+        >
+          3.{props.info[4]} : {props.info[5]}
+        </button>
+        <button
+          onClick={() => {
+            userPickedLetter(props.info[6], parseInt(props.info[7]));
+          }}
+        >
+          4.{props.info[6]} : {props.info[7]}
+        </button>
 
-          <tr>
-            <td onClick={() => check(2, 0, props)}>*</td>
-            <td onClick={() => check(2, 1, props)}>*</td>
-            <td onClick={() => check(2, 2, props)}>*</td>
-          </tr>
-        </table>
-
+        <button onClick={getServerLetter}>Server letter</button>
+        <p>Server proposed letter:{serverLetter}</p>
+        <p>User proposed letter:{userLetter}</p>
         {!stop ? <ScoresTable /> : null}
-      
-        {stop ? <PlayerGamesSummary playerAlias = {props.alias}  currentGameId = {props.currentGameId } />:null}
-       
+
+        {stop ? 
+          <PlayerGamesSummary
+            playerAlias={props.alias}
+            currentGameId={props.currentGameId}
+          />
+        : null}
       </div>
     </>
   );
